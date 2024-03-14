@@ -36,7 +36,7 @@ public class SignController {
 	}
 	
 	@PostMapping("/create-sign")
-	public String createSign(@RequestBody String input) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+	public boolean createSign(@RequestBody String input) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
 		File privateKeyFile  = new File("C:\\work\\Defi work\\sign_payload\\keys\\key2.pem");
 		DataInputStream dis = new DataInputStream(new FileInputStream(privateKeyFile));
         byte[] privKeyBytes = new byte[(int)privateKeyFile.length()];
@@ -55,7 +55,34 @@ public class SignController {
         String signAsString = Base64.getEncoder().encodeToString(signedPayload);
         
         System.out.println(signAsString);
-        return signAsString;
+        boolean res = validateSignmethod(signAsString,input);
+        
+        return res;
+	}
+	
+public boolean validateSignmethod(String signAsString, String input) throws SignatureException, InvalidKeySpecException, NoSuchAlgorithmException, IOException, InvalidKeyException {
+		
+		String publicKeyAsString = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw51WSmfnaOV6UIM1epvx"
+				+ "btbddU/swcPYnLjMqpIpZMxUXOxUZk6ErOK9CzVySpEDH/Gpnm74Na1fZFJv898m"
+				+ "ZVTNS+XGZxe8S9l78WIqdhhDKUN1dpC7kkhKtcin7aZ+STab6HTyKsf7WhfeKtj3"
+				+ "aGQFF26976T6h43m1lSUHhkEYjg8HJ7vYqg+jEqNRkeqc/yknsJGrcG7lqJ5gmrq"
+				+ "e1Ys/9pW5Dpv8UER2jDTihPyv31K+XKF2rxRud0+rbkjAd+zV3MghgZNeHBDlgc2"
+				+ "P+qKIlMIpBfF+5VdVzVh2HGALAbi74nBgrVmShISYwCUE7X3rZ0BbkOwvfvDGUyn"
+				+ "0wIDAQAB";
+       byte[] keyContentAsBytes = Base64.getDecoder().decode(publicKeyAsString);
+        	
+        	
+        	KeyFactory fact = KeyFactory.getInstance("RSA");
+        	  X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(keyContentAsBytes);
+        	  RSAPublicKey publicKey = (RSAPublicKey) fact.generatePublic(pubKeySpec);
+		
+        	 byte[] signBytes = Base64.getDecoder().decode(signAsString);
+        	  Signature verifier = Signature.getInstance("SHA256withRSA");
+            verifier.initVerify(publicKey);
+            verifier.update(input.getBytes());
+            boolean verified = verifier.verify(signBytes);
+           
+        return verified;
 	}
 	
 	@GetMapping("/validate-sign")
@@ -64,6 +91,7 @@ public class SignController {
 		//input and sign
 		String input = "Hello";
 //		 // read public key DER file
+		
 //		File pubKeyFile  = new File("C:\\work\\Defi work\\sign_payload\\keys\\publickey.crt");
 //        DataInputStream dis = new DataInputStream(new FileInputStream(pubKeyFile));
 //        byte[] pubKeyBytes = new byte[(int)pubKeyFile.length()];
